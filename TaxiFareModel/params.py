@@ -4,7 +4,7 @@ import datetime
 AWS_BUCKET_PATH = "s3://wagon-public-datasets/taxi-fare-train.csv"
 LOCAL_PATH = "/Users/R/code/rodrigomras/TaxiFareModel/raw_data/train.csv"
 BUCKET_NAME = 'wagon-ml-sousa-566'
-BUCKET_TRAIN_DATA_PATH = 'data/train_1k.csv'
+BUCKET_TRAIN_DATA_PATH = 'data/train.csv'
 DIST_ARGS = dict(start_lat="pickup_latitude",
                  start_lon="pickup_longitude",
                  end_lat="dropoff_latitude",
@@ -20,4 +20,4 @@ MLFLOW_URI = "https://mlflow.lewagon.co/"
 #BUCKET_TRAIN_DATA_PATH = 'data/train_1k.csv'
 MODEL_VERSION = f'V_{datetime.datetime.now()}'
 MODEL_NAME = 'taxifare'
-STORAGE_LOCATION = 'models/taxifare/{MODEL_VERSION}/model.joblib'
+STORAGE_LOCATION = f'models/taxifare/{MODEL_VERSION}/model.joblib'

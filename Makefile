@@ -108,7 +108,7 @@ REGION=europe-west1
 
 PYTHON_VERSION=3.7
 FRAMEWORK=scikit-learn
-RUNTIME_VERSION=1.15
+RUNTIME_VERSION=2.4
 
 ##### Package params  - - - - - - - - - - - - - - - - - - -
 

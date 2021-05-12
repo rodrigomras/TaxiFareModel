@@ -8,12 +8,13 @@ import category_encoders as ce
 import joblib
 import mlflow
 import pandas as pd
-from TaxiFareModel.data import get_data, clean_df, DIST_ARGS
+from TaxiFareModel.data import get_data, clean_df, download_model
 from TaxiFareModel.encoders import TimeFeaturesEncoder, DistanceTransformer, AddGeohash, Direction, \
     DistanceToCenter
 from TaxiFareModel.utils import compute_rmse, simple_time_tracker
 from TaxiFareModel.params import MODEL_DIRECTY, MLFLOW_URI, BUCKET_NAME, \
-                                BUCKET_TRAIN_DATA_PATH, MODEL_VERSION, STORAGE_LOCATION
+                                BUCKET_TRAIN_DATA_PATH, MODEL_VERSION, \
+                                STORAGE_LOCATION, DIST_ARGS
 from memoized_property import memoized_property
 from mlflow.tracking import MlflowClient
 from psutil import virtual_memory
@@ -82,7 +83,7 @@ class Trainer():
             model = Lasso()
         estimator_params = self.kwargs.get("estimator_params", {})
         self.mlflow_log_param("estimator", estimator)
-        model.set_params(**self.model_params)
+        model.set_params(**estimator_params)
         print(colored(model.__class__.__name__, "red"))
         return model
 
@@ -161,7 +162,7 @@ class Trainer():
         blob.upload_from_filename('model.joblib')
 
     def save_model(self):
-        """Save the model into a .joblib format"""
+        """Save the model into a .joblib format and upload it to gcp storage"""
         joblib.dump(self.pipeline, 'model.joblib')
         print(colored("model.joblib saved locally", "green"))
         upload_gcp = self.kwargs.get('upload_gcp', False)
@@ -220,20 +221,20 @@ if __name__ == "__main__":
     experiment = "[PT][Lisbon][Rodrigo] taxy_fare_566"
     if "YOURNAME" in experiment:
         print(colored("Please define MlFlow experiment variable with your own name", "red"))
-    params = dict(nrows=100000,
-                  local=True,  # set to False to get data from GCP (Storage or BigQuery)
+    params = dict(nrows=1000000,
+                  local=False,  # set to False to get data from GCP (Storage or BigQuery)
                   optimize=True,
                   estimator="xgboost",
                   mlflow=True,  # set to True to log params to mlflow
                   experiment_name=experiment,
                   pipeline_memory=None,
                   distance_type="manhattan",
-                  # feateng=["distance_to_center",
-                  #           "direction",
-                  #           "distance",
-                  #           "time_features",
-                  #           "geohash"
-                  #           ],
+                  feateng=["distance_to_center",
+                            "direction",
+                            "distance",
+                            "time_features",
+                            "geohash"
+                            ],
                   upload_gcp=True
                   )
     print("############   Loading Data   ############")
