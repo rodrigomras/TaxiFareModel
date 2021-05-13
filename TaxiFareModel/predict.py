@@ -1,11 +1,42 @@
 import os
 from math import sqrt
+import joblib
 
 import joblib
 import pandas as pd
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-from TaxiFareModel.params import PATH_TO_LOCAL_MODEL
+from TaxiFareModel.params import PATH_TO_LOCAL_MODEL, BUCKET_NAME
+
+def get_test_data(nrows, data="s3"):
+    """method to get the test data (or a portion of it) from google cloud bucket
+    To predict we can either obtain predictions from train data or from test data"""
+    # Add Client() here
+    path = "data/test.csv"  # ⚠️ to test from actual KAGGLE test set for submission
+
+    if data == "local":
+        df = pd.read_csv(path)
+    elif data == "full":
+        df = pd.read_csv(AWS_BUCKET_TEST_PATH)
+    else:
+        df = pd.read_csv(AWS_BUCKET_TEST_PATH, nrows=nrows)
+    return df
+
+
+def download_model(model_directory="PipelineTest", bucket=BUCKET_NAME, rm=True):
+    client = storage.Client().bucket(bucket)
+
+    storage_location = 'models/{}/versions/{}/{}'.format(
+        MODEL_NAME,
+        model_directory,
+        'model.joblib')
+    blob = client.blob(storage_location)
+    blob.download_to_filename('model.joblib')
+    print("=> pipeline downloaded from storage")
+    model = joblib.load('model.joblib')
+    if rm:
+        os.remove('model.joblib')
+    return model
 
 def get_test_data():
     """method to get the training data (or a portion of it) from google cloud bucket
@@ -48,5 +79,16 @@ def generate_submission_csv(kaggle_upload=False):
 
 
 if __name__ == '__main__':
-    generate_submission_csv(kaggle_upload=False)
+    x = {'key': '2011-12-13 22:00:00.000000232',
+         'pickup_datetime': '2011-12-13 22:00:00 UTC',
+         'pickup_longitude': -74.00786,
+         'pickup_latitude': 40.72332,
+         'dropoff_longitude': -73.972942,
+         'dropoff_latitude': 40.792747,
+         'passenger_count': 1}
+    X = pd.DataFrame([x])
+    print(X)
+    pipeline = joblib.load('model.joblib')
+    y_pred = pipeline.predict(X)
+    print(y_pred)
 

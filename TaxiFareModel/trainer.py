@@ -10,7 +10,7 @@ import mlflow
 import pandas as pd
 from TaxiFareModel.data import get_data, clean_df, download_model
 from TaxiFareModel.encoders import TimeFeaturesEncoder, DistanceTransformer, AddGeohash, Direction, \
-    DistanceToCenter
+    DistanceToCenter, Optimizer
 from TaxiFareModel.utils import compute_rmse, simple_time_tracker
 from TaxiFareModel.params import MODEL_DIRECTY, MLFLOW_URI, BUCKET_NAME, \
                                 BUCKET_TRAIN_DATA_PATH, MODEL_VERSION, \
@@ -45,7 +45,7 @@ class Trainer():
         self.local = kwargs.get("local", False)  # if True training is done locally
         self.mlflow = kwargs.get("mlflow", False)  # if True log info to nlflow
         self.experiment_name = kwargs.get("experiment_name", self.EXPERIMENT_NAME)  # cf doc above
-        self.model_params = kwargs.get("model_params", None)  # for
+        self.model_params = kwargs.get("model_params", {})  # for
         self.X_train = X
         self.y_train = y
         del X, y
@@ -68,22 +68,24 @@ class Trainer():
         elif estimator == "GBM":
             model = GradientBoostingRegressor()
         elif estimator == "RandomForest":
-            model = RandomForestRegressor()
-            self.model_params = {  # 'n_estimators': [int(x) for x in np.linspace(start = 50, stop = 200, num = 10)],
-                'max_features': ['auto', 'sqrt']}
+            model = RandomForestRegressor(n_jobs=-1)
+            if not self.model_params:
+                self.model_params = {  # 'n_estimators': [int(x) for x in np.linspace(start = 50, stop = 200, num = 10)],
+                    'max_features': ['auto', 'sqrt']}
             # 'max_depth' : [int(x) for x in np.linspace(10, 110, num = 11)]}
         elif estimator == "xgboost":
-            model = XGBRegressor(objective='reg:squarederror', n_jobs=-1, max_depth=10, learning_rate=0.05,
+            model = XGBRegressor(objective='reg:squarederror', n_jobs=1, max_depth=10, learning_rate=0.05,
                                  gamma=3)
-            self.model_params = {'max_depth': 10,
+            if not self.model_params:
+                self.model_params = {'max_depth': 10,
                                  'n_estimators': 140,
                                  'learning_rate': 0.05
                                  }
         else:
             model = Lasso()
-        estimator_params = self.kwargs.get("estimator_params", {})
         self.mlflow_log_param("estimator", estimator)
-        model.set_params(**estimator_params)
+        if self.model_params:
+            model.set_params(**self.model_params)
         print(colored(model.__class__.__name__, "red"))
         return model
 
@@ -110,15 +112,20 @@ class Trainer():
             ('direction', pipe_direction, list(DIST_ARGS.values())),
             ('distance_to_center', pipe_distance_to_center, list(DIST_ARGS.values())),
         ]
-        # Filter out some bocks according to input parameters
-        for bloc in feateng_blocks:
-            if bloc[0] not in feateng_steps:
-                feateng_blocks.remove(bloc)
 
-        features_encoder = ColumnTransformer(feateng_blocks, n_jobs=None, remainder="drop")
+        # Filter out some bocks according to input parameters
+        includ_feat=[]
+        for bloc in feateng_blocks:
+            if bloc[0] in feateng_steps:
+                print(bloc[0])
+                includ_feat.append(bloc)
+
+
+        features_encoder = ColumnTransformer(includ_feat, n_jobs=None, remainder="drop")
 
         self.pipeline = Pipeline(steps=[
                     ('features', features_encoder),
+                    # ('optimize', Optimizer())
                     ('rgs', self.get_estimator())],
                                  memory=memory)
 
@@ -221,11 +228,11 @@ if __name__ == "__main__":
     experiment = "[PT][Lisbon][Rodrigo] taxy_fare_566"
     if "YOURNAME" in experiment:
         print(colored("Please define MlFlow experiment variable with your own name", "red"))
-    params = dict(nrows=1000000,
+    params = dict(nrows=100,
                   local=False,  # set to False to get data from GCP (Storage or BigQuery)
-                  optimize=True,
-                  estimator="xgboost",
-                  mlflow=True,  # set to True to log params to mlflow
+                  optimize=False,
+                  estimator="Linear",
+                  mlflow=False,  # set to True to log params to mlflow
                   experiment_name=experiment,
                   pipeline_memory=None,
                   distance_type="manhattan",
@@ -233,9 +240,10 @@ if __name__ == "__main__":
                             "direction",
                             "distance",
                             "time_features",
-                            "geohash"
+                            #"geohash"
                             ],
-                  upload_gcp=True
+                  #model_params={'n_jobs': -1},
+                  upload_gcp=False
                   )
     print("############   Loading Data   ############")
     df = get_data(**params)
@@ -247,6 +255,8 @@ if __name__ == "__main__":
     print("size: {} Mb".format(X_train.memory_usage().sum() / 1e6))
     # Train and save model, locally and
     t = Trainer(X=X_train, y=y_train, **params)
+    print(X_train.head())
+    print(y_train.head())
     del X_train, y_train
     print(colored("############  Training model   ############", "red"))
     t.train()

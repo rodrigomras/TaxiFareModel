@@ -21,3 +21,5 @@ MLFLOW_URI = "https://mlflow.lewagon.co/"
 MODEL_VERSION = f'V_{datetime.datetime.now()}'
 MODEL_NAME = 'taxifare'
 STORAGE_LOCATION = f'models/taxifare/{MODEL_VERSION}/model.joblib'
+
+LOCAL_CACHE="/Users/R/rodrigomras/TaxifareModel/TaxifareModel/data"

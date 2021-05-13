@@ -27,12 +27,12 @@ def predict(key,pickup_datetime,pickup_longitude,pickup_latitude,dropoff_longitu
                 "pickup_latitude": float(pickup_latitude),
                 "dropoff_longitude": float(dropoff_longitude),
                 "dropoff_latitude": float(dropoff_latitude),
-                "passenger_count": float(passenger_count)
+                "passenger_count": int(passenger_count)
                 }
 
     X_pred = pd.DataFrame([user_input])
     # print(X_pred)
-    pipeline = joblib.load(PATH_TO_LOCAL_MODEL)
+    pipeline = joblib.load('model.joblib')
     y_pred = pipeline.predict(X_pred)
     print(type(y_pred[0]))
 

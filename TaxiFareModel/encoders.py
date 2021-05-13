@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from TaxiFareModel.data import get_data, clean_df
+from TaxiFareModel.data import get_data, clean_df, df_optimized
 from TaxiFareModel.utils import haversine_vectorized, minkowski_distance
 from TaxiFareModel.params import DIST_ARGS
 import pygeohash as gh
@@ -17,13 +17,14 @@ class TimeFeaturesEncoder(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         assert isinstance(X, pd.DataFrame)
-        X.index = pd.to_datetime(X[self.time_column])
-        X.index = X.index.tz_convert(self.time_zone_name)
-        X["dow"] = X.index.weekday
-        X["hour"] = X.index.hour
-        X["month"] = X.index.month
-        X["year"] = X.index.year
-        return X[["dow", "hour", "month", "year"]].reset_index(drop=True)
+        X_ = X.copy()
+        X_.index = pd.to_datetime(X[self.time_column])
+        X_.index = X_.index.tz_convert(self.time_zone_name)
+        X_["dow"] = X_.index.weekday
+        X_["hour"] = X_.index.hour
+        X_["month"] = X_.index.month
+        X_["year"] = X_.index.year
+        return X_[["dow", "hour", "month", "year"]].reset_index(drop=True)
 
     def fit(self, X, y=None):
         return self
@@ -114,6 +115,16 @@ class Direction(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
 
+class Optimizer(BaseEstimator, TransformerMixin):
+    def __init__(self, verbose=True):
+        self.verbose = verbose
+
+    def transform(self, df, y=None):
+        df = df_optimized(X, self.verbose)
+        return df
+
+    def fit(self, X, y=None):
+        return self
 
 if __name__ == "__main__":
     params = dict(nrows=1000,
