@@ -2,11 +2,11 @@ import os
 from math import sqrt
 import joblib
 
-import joblib
 import pandas as pd
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from TaxiFareModel.params import PATH_TO_LOCAL_MODEL, BUCKET_NAME
+
 
 def get_test_data(nrows, data="s3"):
     """method to get the test data (or a portion of it) from google cloud bucket
@@ -37,6 +37,7 @@ def download_model(model_directory="PipelineTest", bucket=BUCKET_NAME, rm=True):
     if rm:
         os.remove('model.joblib')
     return model
+
 
 def get_test_data():
     """method to get the training data (or a portion of it) from google cloud bucket

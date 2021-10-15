@@ -42,6 +42,7 @@ class Trainer():
         """
         self.pipeline = None
         self.kwargs = kwargs
+        self.optimize = kwargs.get("optimize", False)
         self.local = kwargs.get("local", False)  # if True training is done locally
         self.mlflow = kwargs.get("mlflow", False)  # if True log info to nlflow
         self.experiment_name = kwargs.get("experiment_name", self.EXPERIMENT_NAME)  # cf doc above
@@ -94,7 +95,7 @@ class Trainer():
         dist = self.kwargs.get("distance_type", "euclidian")
         feateng_steps = self.kwargs.get("feateng", ["distance", "time_features"])
         if memory:
-             memory = mkdtemp()
+            memory = mkdtemp()
 
         # Define feature engineering pipeline blocks here
         pipe_time_features = make_pipeline(TimeFeaturesEncoder(time_column='pickup_datetime'),
@@ -125,9 +126,13 @@ class Trainer():
 
         self.pipeline = Pipeline(steps=[
                     ('features', features_encoder),
-                    # ('optimize', Optimizer())
                     ('rgs', self.get_estimator())],
                                  memory=memory)
+
+        if self.optimize:
+            self.pipeline.steps.insert(1, ('optimize', Optimizer()
+
+        print(self.pipeline.steps)
 
     @simple_time_tracker
     def train(self):
@@ -231,7 +236,7 @@ if __name__ == "__main__":
     params = dict(nrows=100,
                   local=False,  # set to False to get data from GCP (Storage or BigQuery)
                   optimize=False,
-                  estimator="Linear",
+                  estimator="xgboost",
                   mlflow=False,  # set to True to log params to mlflow
                   experiment_name=experiment,
                   pipeline_memory=None,
@@ -242,7 +247,7 @@ if __name__ == "__main__":
                             "time_features",
                             #"geohash"
                             ],
-                  #model_params={'n_jobs': -1},
+                  model_params={'n_jobs': -1},
                   upload_gcp=False
                   )
     print("############   Loading Data   ############")
